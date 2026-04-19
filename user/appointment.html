@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book Appointment - GPMS</title>
+  <link rel="stylesheet" href="/src/css/global.css">
+  <link rel="stylesheet" href="/src/css/components.css">
+  <style>
+    .layout-wrapper { display: flex; min-height: 100vh; }
+    .sidebar { width: 260px; background: var(--bg-card); border-right: 1px solid var(--border-color); padding: 2rem 1.5rem; display: flex; flex-direction: column; }
+    .main-content { flex: 1; padding: 2.5rem; overflow-y: auto; }
+    .nav-item { padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: var(--text-muted); margin-bottom: 0.5rem; display: block; transition: var(--transition); }
+    .nav-item:hover, .nav-item.active { background: rgba(79, 70, 229, 0.15); color: white; }
+    
+    .time-slot {
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      margin: 0.5rem 0.5rem 0 0;
+      cursor: pointer;
+      transition: var(--transition);
+      background: rgba(15, 23, 42, 0.6);
+    }
+    .time-slot:hover { border-color: var(--primary); }
+    .time-slot.selected { background: var(--primary); color: white; border-color: var(--primary); }
+    .time-slot.booked { opacity: 0.5; cursor: not-allowed; text-decoration: line-through; border-color: rgba(239, 68, 68, 0.5); }
+  </style>
+</head>
+<body>
+  <div class="layout-wrapper">
+    <aside class="sidebar">
+      <h2 class="gradient-text mb-4">GPMS</h2>
+      <nav>
+        <a href="/user/dashboard.html" class="nav-item">Dashboard</a>
+        <a href="/user/apply.html" class="nav-item">Apply Passport</a>
+        <a href="/user/documents.html" class="nav-item">Upload Documents</a>
+        <a href="/user/track.html" class="nav-item">Track Status</a>
+        <a href="/user/appointment.html" class="nav-item active">Book Appointment</a>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <h2 class="mb-4">Book Appointment</h2>
+
+      <div class="card mb-4">
+        <p class="text-muted mb-3">Appointments can only be booked if your application is at the "Document Verification" stage.</p>
+        <div class="form-group mb-0">
+          <label class="form-label">Select Valid Application</label>
+          <select id="application-select" class="form-control">
+            <option value="">Loading...</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="booking-section" class="card hidden">
+        <form id="booking-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Passport Office</label>
+              <select id="office" class="form-control" required>
+                <option value="">Select Office</option>
+                <option value="PSK Mumbai">PSK Mumbai</option>
+                <option value="PSK Delhi">PSK Delhi</option>
+                <option value="PSK Bangalore">PSK Bangalore</option>
+                <option value="PSK Chennai">PSK Chennai</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Select Date</label>
+              <input type="date" id="date" class="form-control" required>
+            </div>
+          </div>
+          
+          <div class="form-group" id="slot-container">
+            <label class="form-label">Select Time Slot</label>
+            <p class="text-muted" style="font-size: 0.9rem;">Please select a date to view available slots.</p>
+            <div id="slots-wrapper" class="mt-2 text-muted"></div>
+          </div>
+          <input type="hidden" id="selected_slot" required>
+
+          <button type="submit" id="book-btn" class="btn btn-primary mt-2">Confirm Appointment</button>
+        </form>
+      </div>
+
+      <div id="existing-booking" class="card hidden border-success bg-opacity-10">
+        <h3 class="mb-2" style="color: var(--success);">Appointment Confirmed ✅</h3>
+        <p>You have an existing appointment for this application. Double booking is not allowed.</p>
+        <div class="mt-3">
+          <p><strong>Office:</strong> <span id="ex-office"></span></p>
+          <p><strong>Date:</strong> <span id="ex-date"></span></p>
+          <p><strong>Time:</strong> <span id="ex-time"></span></p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module">
+    import { supabase } from '/src/js/db.js';
+    import { requireAuth, showToast, createLoader } from '/src/js/ui.js';
+
+    const ALL_SLOTS = ["09:00 AM", "10:00 AM", "11:00 AM", "01:00 PM", "02:00 PM", "03:00 PM", "04:00 PM"];
+    let currentUserId = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const session = await requireAuth(supabase);
+      if (!session) return;
+      currentUserId = session.user.id;
+
+      // Set min date to tomorrow
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      document.getElementById('date').min = tomorrow.toISOString().split('T')[0];
+
+      const appSelect = document.getElementById('application-select');
+      const bookingSection = document.getElementById('booking-section');
+      const existingSection = document.getElementById('existing-booking');
+
+      // Only fetch applications in matching status
+      const { data: apps } = await supabase.from('passport_applications')
+        .select('id, application_id, status')
+        .eq('user_id', currentUserId);
+      
+      const validApps = apps?.filter(a => ['Document Verification', 'Appointment Scheduled'].includes(a.status)) || [];
+
+      if (validApps.length > 0) {
+        appSelect.innerHTML = '<option value="">-- Choose an application --</option>';
+        validApps.forEach(app => {
+          appSelect.innerHTML += `<option value="${app.id}">${app.application_id} - ${app.status}</option>`;
+        });
+      } else {
+        appSelect.innerHTML = '<option value="">No applications eligible for booking</option>';
+      }
+
+      appSelect.addEventListener('change', async (e) => {
+        const appId = e.target.value;
+        if (!appId) {
+          bookingSection.classList.add('hidden');
+          existingSection.classList.add('hidden');
+          return;
+        }
+
+        // Check if already booked
+        const { data: apts } = await supabase.from('appointments').select('*').eq('application_id', appId);
+        if (apts && apts.length > 0) {
+          bookingSection.classList.add('hidden');
+          existingSection.classList.remove('hidden');
+          document.getElementById('ex-office').innerText = apts[0].passport_office;
+          document.getElementById('ex-date').innerText = new Date(apts[0].appointment_date).toLocaleDateString();
+          document.getElementById('ex-time').innerText = apts[0].time_slot;
+        } else {
+          existingSection.classList.add('hidden');
+          bookingSection.classList.remove('hidden');
+        }
+      });
+
+      document.getElementById('date').addEventListener('change', async (e) => {
+        const date = e.target.value;
+        const office = document.getElementById('office').value;
+        if (!date || !office) return;
+
+        // Fetch already booked slots for this date and office
+        const { data: booked } = await supabase.from('appointments')
+          .select('time_slot')
+          .eq('appointment_date', date)
+          .eq('passport_office', office);
+
+        const bookedSlots = booked?.map(b => b.time_slot) || [];
+        const slotsWrapper = document.getElementById('slots-wrapper');
+        slotsWrapper.innerHTML = '';
+        document.getElementById('selected_slot').value = '';
+
+        ALL_SLOTS.forEach(slot => {
+          const isBooked = bookedSlots.includes(slot);
+          const el = document.createElement('div');
+          el.className = `time-slot ${isBooked ? 'booked' : ''}`;
+          el.innerText = slot;
+          if (!isBooked) {
+            el.addEventListener('click', () => {
+              document.querySelectorAll('.time-slot').forEach(div => div.classList.remove('selected'));
+              el.classList.add('selected');
+              document.getElementById('selected_slot').value = slot;
+            });
+          }
+          slotsWrapper.appendChild(el);
+        });
+      });
+
+      document.getElementById('booking-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const appId = appSelect.value;
+        const timeSlot = document.getElementById('selected_slot').value;
+        if (!timeSlot) return showToast('Please select a time slot', 'error');
+
+        const btn = document.getElementById('book-btn');
+        btn.innerHTML = createLoader() + ' Booking...';
+        btn.disabled = true;
+
+        const payload = {
+          application_id: appId,
+          user_id: currentUserId,
+          passport_office: document.getElementById('office').value,
+          appointment_date: document.getElementById('date').value,
+          time_slot: timeSlot,
+          status: 'Scheduled'
+        };
+
+        const { error } = await supabase.from('appointments').insert(payload);
+
+        if (error) {
+          showToast(error.message, 'error');
+          btn.innerHTML = 'Confirm Appointment';
+          btn.disabled = false;
+        } else {
+          // Update application status
+          await supabase.from('passport_applications')
+            .update({ status: 'Appointment Scheduled' })
+            .eq('id', appId);
+
+          // create notification
+          await supabase.from('notifications').insert({
+            user_id: currentUserId,
+            title: 'Appointment Booked',
+            message: `Your appointment is confirmed at ${payload.passport_office} on ${payload.appointment_date} at ${timeSlot}.`
+          });
+
+          showToast('Appointment Confirmed!', 'success');
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+        }
+      });
+    });
+  </script>
+</body>
+</html>

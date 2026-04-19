@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Global Passport Management System</title>
+  <link rel="stylesheet" href="/src/css/global.css">
+  <link rel="stylesheet" href="/src/css/components.css">
+  <style>
+    .hero {
+      min-height: 90vh;
+      display: flex;
+      align-items: center;
+      position: relative;
+    }
+    .hero-content {
+      max-width: 600px;
+      z-index: 10;
+    }
+    .hero h1 {
+      font-size: 3.5rem;
+      margin-bottom: 1rem;
+    }
+    .hero p {
+      font-size: 1.25rem;
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+    }
+    .hero-image {
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 500px;
+      height: 500px;
+      background: var(--bg-card);
+      border-radius: 50%;
+      filter: blur(80px);
+      z-index: 1;
+    }
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem 0;
+    }
+    .nav-brand {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: white;
+    }
+    .nav-links {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      margin-bottom: 4rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <div class="nav-brand gradient-text">GPMS</div>
+      <div class="nav-links">
+        <a href="/">Home</a>
+        <a href="/login.html" class="btn btn-outline" id="nav-login">Login</a>
+        <a href="/signup.html" class="btn btn-primary" id="nav-apply">Start Application</a>
+      </div>
+    </nav>
+    
+    <div class="hero">
+      <div class="hero-image"></div>
+      <div class="hero-content">
+        <h1>Global <span class="gradient-text">Passport</span><br>Management System</h1>
+        <p>A seamless, fully digital experience to apply, track, and manage your passport application without the hassle. Fast, secure, and modern.</p>
+        <div class="d-flex" style="gap: 1rem;">
+          <a href="/signup.html" class="btn btn-primary">Apply Now</a>
+          <a href="/login.html" class="btn btn-outline">Track Application</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="features-grid mt-4">
+      <div class="card text-center">
+        <h3 class="mb-1">Secure & Digital</h3>
+        <p class="text-muted">Upload and verify all your documents through our highly secure cloud storage.</p>
+      </div>
+      <div class="card text-center">
+        <h3 class="mb-1">Real-time Tracking</h3>
+        <p class="text-muted">Know exactly where your application is in the verification and approval process.</p>
+      </div>
+      <div class="card text-center">
+        <h3 class="mb-1">Easy Appointments</h3>
+        <p class="text-muted">Book and manage your passport office interviews seamlessly.</p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase } from '/src/js/db.js';
+    
+    // Check if deeply logged in to change nav buttons
+    async function checkAuth() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        document.getElementById('nav-login').textContent = 'Dashboard';
+        document.getElementById('nav-login').href = '/user/dashboard.html';
+        document.getElementById('nav-apply').classList.add('hidden');
+      }
+    }
+    checkAuth();
+  </script>
+</body>
+</html>

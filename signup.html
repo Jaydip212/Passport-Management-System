@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register - GPMS</title>
+  <link rel="stylesheet" href="/src/css/global.css">
+  <link rel="stylesheet" href="/src/css/components.css">
+</head>
+<body>
+  <div class="auth-wrapper">
+    <div class="glass-panel" style="width: 100%; max-width: 500px; padding: 3rem;">
+      <div class="text-center mb-4">
+        <h2 class="gradient-text">Create an Account</h2>
+        <p class="text-muted mt-1">Start your digital passport application</p>
+      </div>
+      
+      <form id="signup-form">
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" id="full_name" class="form-control" required placeholder="John Doe">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Mobile Number</label>
+          <input type="tel" id="mobile" class="form-control" required placeholder="9876543210" pattern="[0-9]{10}">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" id="email" class="form-control" required placeholder="you@example.com">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" id="password" class="form-control" required placeholder="••••••••" minlength="6">
+        </div>
+        
+        <button type="submit" class="btn btn-primary btn-block mt-3" id="submit-btn">Create Account</button>
+      </form>
+      
+      <div class="text-center mt-4">
+        <p class="text-muted">Already have an account? <a href="/login.html">Login here</a></p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase } from '/src/js/db.js';
+    import { showToast, createLoader } from '/src/js/ui.js';
+
+    document.getElementById('signup-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const full_name = document.getElementById('full_name').value;
+      const mobile = document.getElementById('mobile').value;
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const btn = document.getElementById('submit-btn');
+      
+      btn.innerHTML = createLoader() + ' Registering...';
+      btn.disabled = true;
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name,
+            mobile,
+            role: 'user'
+          }
+        }
+      });
+
+      if (error) {
+        showToast(error.message, 'error');
+        btn.innerHTML = 'Create Account';
+        btn.disabled = false;
+      } else {
+        showToast('Registration successful! Please check your email to verify.', 'success');
+        setTimeout(() => {
+          window.location.href = '/user/dashboard.html';
+        }, 2000);
+      }
+    });
+  </script>
+</body>
+</html>

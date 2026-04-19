@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Applications - GPMS</title>
+  <link rel="stylesheet" href="/src/css/global.css">
+  <link rel="stylesheet" href="/src/css/components.css">
+  <style>
+    .layout-wrapper { display: flex; min-height: 100vh; }
+    .sidebar { width: 260px; background: rgba(30,41,59,0.9); border-right: 1px solid var(--border-color); padding: 2rem 1.5rem; display: flex; flex-direction: column; }
+    .main-content { flex: 1; padding: 2.5rem; overflow-y: auto; background-image: radial-gradient(circle at 10% 90%, rgba(239, 68, 68, 0.05), transparent 30%); }
+    .nav-item { padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: var(--text-muted); margin-bottom: 0.5rem; display: block; transition: var(--transition); }
+    .nav-item:hover, .nav-item.active { background: rgba(239, 68, 68, 0.15); color: white; border-left: 3px solid var(--danger); }
+    
+    .table-wrapper { overflow-x: auto; background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border-color); }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th, td { padding: 1rem; border-bottom: 1px solid var(--border-color); }
+    th { background: rgba(255,255,255,0.05); font-weight: 600; color: var(--text-muted); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .doc-link { color: var(--accent); display: inline-block; margin-right: 0.5rem; margin-bottom: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div class="layout-wrapper">
+    <aside class="sidebar">
+      <h2 class="mb-4" style="color: var(--danger);">Admin Panel</h2>
+      <nav>
+        <a href="/admin/dashboard.html" class="nav-item">Dashboard Overview</a>
+        <a href="/admin/applications.html" class="nav-item active">Manage Applications</a>
+        <a href="/admin/users.html" class="nav-item">System Users</a>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <div class="d-flex justify-between align-center mb-4">
+        <h2>Manage Applications</h2>
+        <div class="d-flex" style="gap: 1rem;">
+          <input type="text" id="search-input" class="form-control" placeholder="Search ID or Name" style="width: 250px; padding: 0.5rem;">
+          <select id="status-filter" class="form-control" style="width: auto; padding: 0.5rem;">
+            <option value="">All Statuses</option>
+            <option value="Submitted">Submitted</option>
+            <option value="Under Review">Under Review</option>
+            <option value="Document Verification">Document Verification</option>
+            <option value="Appointment Scheduled">Appointment Scheduled</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>App ID</th>
+              <th>Applicant Name</th>
+              <th>Type</th>
+              <th>Submitted</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="app-table-body">
+            <tr><td colspan="6" class="text-center">Loading applications...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="app-modal">
+    <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+      <button class="modal-close" id="close-modal">&times;</button>
+      <h3 class="mb-3">Application Details</h3>
+      
+      <div id="modal-body"></div>
+
+      <div class="mt-4" style="border-top: 1px solid var(--border-color); padding-top: 1rem;">
+        <h4>Update Status</h4>
+        <div class="form-group mt-2">
+          <label class="form-label">Change Status</label>
+          <select id="update-status" class="form-control">
+            <option value="Under Review">Under Review</option>
+            <option value="Document Verification">Document Verification</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+            <option value="Dispatched">Dispatched</option>
+          </select>
+        </div>
+        <div class="form-group" id="remark-group">
+          <label class="form-label">Admin Remarks (Mandatory for rejection)</label>
+          <textarea id="admin-remark" class="form-control" rows="3"></textarea>
+        </div>
+        <button id="save-status-btn" class="btn btn-primary">Update Application</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase } from '/src/js/db.js';
+    import { requireAdmin, showToast } from '/src/js/ui.js';
+
+    let allApps = [];
+    let currentAppId = null;
+    let currentUserId = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const session = await requireAdmin(supabase);
+      if (!session) return;
+
+      const tbody = document.getElementById('app-table-body');
+      const searchInput = document.getElementById('search-input');
+      const statusFilter = document.getElementById('status-filter');
+      const modal = document.getElementById('app-modal');
+
+      await fetchApps();
+
+      searchInput.addEventListener('input', renderTable);
+      statusFilter.addEventListener('change', renderTable);
+
+      document.getElementById('close-modal').addEventListener('click', () => modal.classList.remove('active'));
+
+      async function fetchApps() {
+        const { data, error } = await supabase.from('passport_applications').select('*').order('created_at', { ascending: false });
+        if (!error && data) {
+          allApps = data;
+          renderTable();
+        }
+      }
+
+      function renderTable() {
+        const query = searchInput.value.toLowerCase();
+        const status = statusFilter.value;
+
+        const filtered = allApps.filter(app => {
+          const matchQuery = app.application_id.toLowerCase().includes(query) || app.full_name.toLowerCase().includes(query);
+          const matchStatus = status ? app.status === status : true;
+          return matchQuery && matchStatus;
+        });
+
+        if (filtered.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">No applications found</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = filtered.map(app => `
+          <tr>
+            <td><strong>${app.application_id}</strong></td>
+            <td>${app.full_name}</td>
+            <td>${app.passport_type} / ${app.application_type}</td>
+            <td style="font-size: 0.9rem">${new Date(app.submitted_at).toLocaleDateString()}</td>
+            <td><span class="badge ${badgeClass(app.status)}">${app.status}</span></td>
+            <td><button class="btn btn-outline view-btn" data-id="${app.id}" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">View</button></td>
+          </tr>
+        `).join('');
+
+        document.querySelectorAll('.view-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => openModal(e.target.dataset.id));
+        });
+      }
+
+      function badgeClass(status) {
+        if (status === 'Approved') return 'badge-success';
+        if (status === 'Rejected') return 'badge-danger';
+        if (status === 'Submitted' || status === 'Under Review') return 'badge-warning';
+        return 'badge-info';
+      }
+
+      async function openModal(id) {
+        currentAppId = id;
+        const app = allApps.find(a => a.id === id);
+        currentUserId = app.user_id;
+        
+        // Fetch docs
+        const { data: docs } = await supabase.from('documents').select('*').eq('application_id', id);
+        let docsHtml = '<p class="text-muted">No documents uploaded.</p>';
+        
+        if (docs && docs.length > 0) {
+          docsHtml = docs.map(doc => {
+            const { data } = supabase.storage.from('documents').getPublicUrl(doc.file_url);
+            return `<a href="${data.publicUrl}" target="_blank" class="doc-link">📄 ${doc.document_type}</a>`;
+          }).join('');
+        }
+
+        document.getElementById('update-status').value = app.status;
+        document.getElementById('admin-remark').value = app.admin_remark || '';
+
+        document.getElementById('modal-body').innerHTML = `
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+            <div>
+              <p class="text-muted">Application ID</p>
+              <p><strong>${app.application_id}</strong></p>
+            </div>
+            <div>
+              <p class="text-muted">Current Status</p>
+              <p><span class="badge ${badgeClass(app.status)}">${app.status}</span></p>
+            </div>
+            <div>
+              <p class="text-muted">Full Name</p>
+              <p>${app.full_name}</p>
+            </div>
+            <div>
+              <p class="text-muted">DOB / Gender</p>
+              <p>${app.dob} / ${app.gender}</p>
+            </div>
+            <div>
+              <p class="text-muted">Contact</p>
+              <p>${app.mobile} <br> ${app.email}</p>
+            </div>
+            <div>
+              <p class="text-muted">Address</p>
+              <p>${app.address}, ${app.city}, ${app.state} - ${app.pincode}</p>
+            </div>
+            <div>
+              <p class="text-muted">Aadhaar / PAN</p>
+              <p>${app.aadhaar_number} / ${app.pan_number || 'N/A'}</p>
+            </div>
+            <div>
+              <p class="text-muted">Emergency Contact</p>
+              <p>${app.emergency_contact}</p>
+            </div>
+          </div>
+          <h4>Uploaded Documents</h4>
+          <div class="mt-2 p-3" style="background: rgba(0,0,0,0.2); border-radius: 8px;">
+            ${docsHtml}
+          </div>
+        `;
+        modal.classList.add('active');
+      }
+
+      document.getElementById('save-status-btn').addEventListener('click', async () => {
+        const newStatus = document.getElementById('update-status').value;
+        const remark = document.getElementById('admin-remark').value;
+
+        if (newStatus === 'Rejected' && !remark.trim()) {
+          return showToast('Admin remark is required for rejection.', 'error');
+        }
+
+        const { error } = await supabase.from('passport_applications')
+          .update({ status: newStatus, admin_remark: remark })
+          .eq('id', currentAppId);
+
+        if (error) {
+          showToast(error.message, 'error');
+        } else {
+          // Send notification to user
+          await supabase.from('notifications').insert({
+            user_id: currentUserId,
+            title: 'Application Status Updated',
+            message: `Your application status has been updated to: ${newStatus}.`
+          });
+          
+          showToast('Status updated successfully.', 'success');
+          modal.classList.remove('active');
+          await fetchApps();
+        }
+      });
+    });
+  </script>
+</body>
+</html>

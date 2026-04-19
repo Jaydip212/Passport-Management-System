@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Portal - GPMS</title>
+  <link rel="stylesheet" href="/src/css/global.css">
+  <link rel="stylesheet" href="/src/css/components.css">
+  <style>
+    .admin-bg {
+      background-image: radial-gradient(circle at 50% 0%, rgba(239, 68, 68, 0.15), transparent 50%),
+                        radial-gradient(circle at 10% 90%, rgba(79, 70, 229, 0.1), transparent 30%);
+    }
+  </style>
+</head>
+<body class="admin-bg">
+  <div class="auth-wrapper">
+    <div class="glass-panel" style="width: 100%; max-width: 450px; padding: 3rem; border-top: 4px solid var(--danger);">
+      <div class="text-center mb-4">
+        <h2>Admin <span style="color: var(--danger)">Portal</span></h2>
+        <p class="text-muted mt-1">Authorized personnel only</p>
+      </div>
+      
+      <form id="admin-login-form">
+        <div class="form-group">
+          <label class="form-label">Admin Email</label>
+          <input type="email" id="email" class="form-control" required placeholder="admin@example.com">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" id="password" class="form-control" required placeholder="••••••••">
+        </div>
+        
+        <button type="submit" class="btn btn-danger btn-block mt-3" id="submit-btn" style="color: white; background: var(--danger);">Access System</button>
+      </form>
+      
+      <div class="text-center mt-4">
+        <p class="text-muted mt-1" style="font-size: 0.9rem;"><a href="/login.html">← Back to User Login</a></p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase } from '/src/js/db.js';
+    import { showToast, createLoader } from '/src/js/ui.js';
+
+    document.getElementById('admin-login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const btn = document.getElementById('submit-btn');
+      
+      btn.innerHTML = createLoader() + ' Verifying...';
+      btn.disabled = true;
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        showToast(error.message, 'error');
+        btn.innerHTML = 'Access System';
+        btn.disabled = false;
+      } else {
+        // Verify role before passing
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', data.user.id)
+          .single();
+          
+        if (profile?.role === 'admin') {
+          showToast('Admin Access Granted', 'success');
+          window.location.href = '/admin/dashboard.html';
+        } else {
+          // If not admin, sign them out and show error
+          await supabase.auth.signOut();
+          showToast('Unauthorized. Admin access required.', 'error');
+          btn.innerHTML = 'Access System';
+          btn.disabled = false;
+        }
+      }
+    });
+  </script>
+</body>
+</html>

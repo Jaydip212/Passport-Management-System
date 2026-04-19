@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Track Status - GPMS</title>
+  <link rel="stylesheet" href="/src/css/global.css">
+  <link rel="stylesheet" href="/src/css/components.css">
+  <style>
+    .layout-wrapper { display: flex; min-height: 100vh; }
+    .sidebar { width: 260px; background: var(--bg-card); border-right: 1px solid var(--border-color); padding: 2rem 1.5rem; display: flex; flex-direction: column; }
+    .main-content { flex: 1; padding: 2.5rem; overflow-y: auto; }
+    .nav-item { padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: var(--text-muted); margin-bottom: 0.5rem; display: block; transition: var(--transition); }
+    .nav-item:hover, .nav-item.active { background: rgba(79, 70, 229, 0.15); color: white; }
+    
+    .timeline {
+      position: relative;
+      padding-left: 2rem;
+      margin-top: 2rem;
+    }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 0.45rem;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--border-color);
+    }
+    .timeline-item {
+      position: relative;
+      margin-bottom: 2rem;
+    }
+    .timeline-dot {
+      position: absolute;
+      left: -2.35rem;
+      top: 0.25rem;
+      width: 1rem;
+      height: 1rem;
+      border-radius: 50%;
+      background: var(--bg-main);
+      border: 2px solid var(--border-color);
+      z-index: 2;
+    }
+    .timeline-item.active .timeline-dot {
+      border-color: var(--primary);
+      background: var(--primary);
+      box-shadow: 0 0 10px rgba(79, 70, 229, 0.6);
+    }
+    .timeline-item.completed .timeline-dot {
+      border-color: var(--success);
+      background: var(--success);
+    }
+    .timeline-item.rejected .timeline-dot {
+      border-color: var(--danger);
+      background: var(--danger);
+    }
+  </style>
+</head>
+<body>
+  <div class="layout-wrapper">
+    <aside class="sidebar">
+      <h2 class="gradient-text mb-4">GPMS</h2>
+      <nav>
+        <a href="/user/dashboard.html" class="nav-item">Dashboard</a>
+        <a href="/user/apply.html" class="nav-item">Apply Passport</a>
+        <a href="/user/documents.html" class="nav-item">Upload Documents</a>
+        <a href="/user/track.html" class="nav-item active">Track Status</a>
+        <a href="/user/appointment.html" class="nav-item">Book Appointment</a>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <h2 class="mb-4">Track Application Status</h2>
+
+      <div class="card mb-4">
+        <div class="form-group mb-0">
+          <label class="form-label">Select Application</label>
+          <select id="application-select" class="form-control">
+            <option value="">Loading applications...</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="tracker-section" class="card hidden">
+        <div class="d-flex justify-between align-center border-bottom mb-4" style="border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+          <div>
+            <h3 id="app-id-display">Application ID</h3>
+            <p class="text-muted" id="app-date-display">Submitted on: -</p>
+          </div>
+          <a id="receipt-btn" href="#" class="btn btn-outline hidden">View Receipt</a>
+        </div>
+
+        <div class="timeline" id="timeline">
+          <!-- populated via js -->
+        </div>
+
+        <div id="admin-remarks" class="mt-4 hidden" style="padding: 1rem; background: rgba(239,68,68,0.1); border-left: 4px solid var(--danger); border-radius: 4px;">
+          <h4 style="color: var(--danger); margin-bottom: 0.5rem;">Admin Remark (Rejection Reason)</h4>
+          <p id="remark-text"></p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module">
+    import { supabase } from '/src/js/db.js';
+    import { requireAuth } from '/src/js/ui.js';
+
+    const STAGES = [
+      'Submitted',
+      'Under Review',
+      'Document Verification',
+      'Appointment Scheduled',
+      'Approved',
+      'Dispatched'
+    ];
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const session = await requireAuth(supabase);
+      if (!session) return;
+      const currentUserId = session.user.id;
+
+      const appSelect = document.getElementById('application-select');
+      const trackerSection = document.getElementById('tracker-section');
+      
+      const { data: apps } = await supabase.from('passport_applications').select('*').eq('user_id', currentUserId).order('created_at', { ascending: false });
+      
+      if (apps && apps.length > 0) {
+        appSelect.innerHTML = '<option value="">-- Choose an application --</option>';
+        apps.forEach(app => {
+          appSelect.innerHTML += `<option value="${app.id}">${app.application_id} - ${app.status}</option>`;
+        });
+      } else {
+        appSelect.innerHTML = '<option value="">No applications found</option>';
+      }
+
+      appSelect.addEventListener('change', (e) => {
+        if (e.target.value) {
+          const app = apps.find(a => a.id === e.target.value);
+          renderTimeline(app);
+          trackerSection.classList.remove('hidden');
+        } else {
+          trackerSection.classList.add('hidden');
+        }
+      });
+
+      function renderTimeline(app) {
+        document.getElementById('app-id-display').innerText = `ID: ${app.application_id}`;
+        document.getElementById('app-date-display').innerText = `Submitted on: ${new Date(app.submitted_at).toLocaleDateString()}`;
+        
+        const receiptBtn = document.getElementById('receipt-btn');
+        if (app.status === 'Approved' || app.status === 'Dispatched') {
+          receiptBtn.classList.remove('hidden');
+          receiptBtn.href = `/user/receipt.html?id=${app.id}`;
+        } else {
+          receiptBtn.classList.add('hidden');
+        }
+
+        const adminRemarks = document.getElementById('admin-remarks');
+        if (app.status === 'Rejected') {
+          adminRemarks.classList.remove('hidden');
+          document.getElementById('remark-text').innerText = app.admin_remark || 'No specific reason provided.';
+        } else {
+          adminRemarks.classList.add('hidden');
+        }
+
+        let html = '';
+        const currentStageIndex = STAGES.indexOf(app.status);
+        const isRejected = (app.status === 'Rejected');
+
+        STAGES.forEach((stage, index) => {
+          let stateClass = '';
+          let subText = '';
+          if (isRejected) {
+            if (index === 0) stateClass = 'completed'; // always completed submitted
+            else if (index === 1) { stateClass = 'rejected'; subText = 'Application Rejected'; } // mark review failed
+          } else {
+            if (index < currentStageIndex) stateClass = 'completed';
+            else if (index === currentStageIndex) stateClass = 'active';
+          }
+
+          // Skip rendering stages past rejection
+          if (isRejected && index > 1) return;
+          if (isRejected && index === 1) stage = 'Rejected';
+
+          html += `
+            <div class="timeline-item ${stateClass}">
+              <div class="timeline-dot"></div>
+              <h4>${stage}</h4>
+              <p class="text-muted" style="font-size: 0.9rem;">${stateClass === 'completed' ? 'Completed' : (stateClass === 'active' ? 'In Progress' : (stateClass === 'rejected' ? 'Rejected' : 'Pending'))}</p>
+            </div>
+          `;
+        });
+
+        document.getElementById('timeline').innerHTML = html;
+      }
+    });
+  </script>
+</body>
+</html>

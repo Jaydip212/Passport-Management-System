@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>System Users - GPMS</title>
+  <link rel="stylesheet" href="/src/css/global.css">
+  <link rel="stylesheet" href="/src/css/components.css">
+  <style>
+    .layout-wrapper { display: flex; min-height: 100vh; }
+    .sidebar { width: 260px; background: rgba(30,41,59,0.9); border-right: 1px solid var(--border-color); padding: 2rem 1.5rem; display: flex; flex-direction: column; }
+    .main-content { flex: 1; padding: 2.5rem; overflow-y: auto; background-image: radial-gradient(circle at 10% 90%, rgba(239, 68, 68, 0.05), transparent 30%); }
+    .nav-item { padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: var(--text-muted); margin-bottom: 0.5rem; display: block; transition: var(--transition); }
+    .nav-item:hover, .nav-item.active { background: rgba(239, 68, 68, 0.15); color: white; border-left: 3px solid var(--danger); }
+    
+    .table-wrapper { overflow-x: auto; background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border-color); }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th, td { padding: 1rem; border-bottom: 1px solid var(--border-color); }
+    th { background: rgba(255,255,255,0.05); font-weight: 600; color: var(--text-muted); }
+    tr:last-child td { border-bottom: none; }
+  </style>
+</head>
+<body>
+  <div class="layout-wrapper">
+    <aside class="sidebar">
+      <h2 class="mb-4" style="color: var(--danger);">Admin Panel</h2>
+      <nav>
+        <a href="/admin/dashboard.html" class="nav-item">Dashboard Overview</a>
+        <a href="/admin/applications.html" class="nav-item">Manage Applications</a>
+        <a href="/admin/users.html" class="nav-item active">System Users</a>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <div class="d-flex justify-between align-center mb-4">
+        <h2>Registered Users</h2>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Full Name</th>
+              <th>Email</th>
+              <th>Mobile</th>
+              <th>Role</th>
+              <th>Joined Date</th>
+            </tr>
+          </thead>
+          <tbody id="users-table-body">
+            <tr><td colspan="5" class="text-center">Loading users...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script type="module">
+    import { supabase } from '/src/js/db.js';
+    import { requireAdmin } from '/src/js/ui.js';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const session = await requireAdmin(supabase);
+      if (!session) return;
+
+      const tbody = document.getElementById('users-table-body');
+      
+      const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+      
+      if (error) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted" style="color:var(--danger)">Error loading users</td></tr>`;
+        return;
+      }
+
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">No users found</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = data.map(user => `
+        <tr>
+          <td><strong>${user.full_name || 'N/A'}</strong></td>
+          <td>${user.email}</td>
+          <td>${user.mobile || 'N/A'}</td>
+          <td><span class="badge ${user.role === 'admin' ? 'badge-danger' : 'badge-info'}">${user.role}</span></td>
+          <td style="font-size: 0.9rem">${new Date(user.created_at).toLocaleDateString()}</td>
+        </tr>
+      `).join('');
+    });
+  </script>
+</body>
+</html>

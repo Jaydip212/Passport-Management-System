@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apply for Passport - GPMS</title>
+  <link rel="stylesheet" href="/src/css/global.css">
+  <link rel="stylesheet" href="/src/css/components.css">
+  <style>
+    .layout-wrapper { display: flex; min-height: 100vh; }
+    .sidebar { width: 260px; background: var(--bg-card); border-right: 1px solid var(--border-color); padding: 2rem 1.5rem; display: flex; flex-direction: column; }
+    .main-content { flex: 1; padding: 2.5rem; overflow-y: auto; }
+    .nav-item { padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: var(--text-muted); margin-bottom: 0.5rem; display: block; transition: var(--transition); }
+    .nav-item:hover, .nav-item.active { background: rgba(79, 70, 229, 0.15); color: white; }
+    
+    .form-section { border-bottom: 1px solid var(--border-color); padding-bottom: 1.5rem; margin-bottom: 1.5rem; }
+    .form-section-title { font-size: 1.25rem; color: var(--accent); margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="layout-wrapper">
+    <aside class="sidebar">
+      <h2 class="gradient-text mb-4">GPMS</h2>
+      <nav>
+        <a href="/user/dashboard.html" class="nav-item">Dashboard</a>
+        <a href="/user/apply.html" class="nav-item active">Apply Passport</a>
+        <a href="/user/documents.html" class="nav-item">Upload Documents</a>
+        <a href="/user/track.html" class="nav-item">Track Status</a>
+        <a href="/user/appointment.html" class="nav-item">Book Appointment</a>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <h2 class="mb-4">New Passport Application</h2>
+      
+      <div class="card">
+        <form id="apply-form">
+          <!-- Section 1 -->
+          <div class="form-section">
+            <h3 class="form-section-title">1. Personal Details</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" id="full_name" class="form-control" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Date of Birth</label>
+                <input type="date" id="dob" class="form-control" required>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Gender</label>
+                <select id="gender" class="form-control" required>
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Nationality</label>
+                <input type="text" id="nationality" class="form-control" value="Indian" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Place of Birth</label>
+                <input type="text" id="place_of_birth" class="form-control" required>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2 -->
+          <div class="form-section">
+            <h3 class="form-section-title">2. Contact & Address</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Mobile Number</label>
+                <input type="tel" id="mobile" class="form-control" pattern="[0-9]{10}" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" id="email" class="form-control" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Complete Address</label>
+              <input type="text" id="address" class="form-control" required>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">City</label>
+                <input type="text" id="city" class="form-control" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">State</label>
+                <input type="text" id="state" class="form-control" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Pincode</label>
+                <input type="text" id="pincode" class="form-control" pattern="[0-9]{6}" required>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 3 -->
+          <div class="form-section">
+            <h3 class="form-section-title">3. Identity & Application Type</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Aadhaar Number</label>
+                <input type="text" id="aadhaar_number" class="form-control" pattern="[0-9]{12}" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">PAN Number (Optional)</label>
+                <input type="text" id="pan_number" class="form-control">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Passport Type</label>
+                <select id="passport_type" class="form-control" required>
+                  <option value="Normal">Normal</option>
+                  <option value="Tatkal">Tatkal</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Application Type</label>
+                <select id="application_type" class="form-control" required>
+                  <option value="New Passport">New Passport</option>
+                  <option value="Renewal">Renewal</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Emergency Contact Name & Number</label>
+              <input type="text" id="emergency_contact" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-group mt-3 flex align-center" style="display: flex; gap: 0.5rem; align-items: flex-start;">
+            <input type="checkbox" id="declaration" required style="margin-top: 5px;">
+            <label class="form-label" style="display: inline;" for="declaration">I declare that all information provided is true and correct to the best of my knowledge.</label>
+          </div>
+
+          <button type="submit" id="submit-btn" class="btn btn-primary mt-3">Submit Application</button>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script type="module">
+    import { supabase } from '/src/js/db.js';
+    import { requireAuth, showToast, createLoader } from '/src/js/ui.js';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const session = await requireAuth(supabase);
+      if (!session) return;
+      const userId = session.user.id;
+
+      document.getElementById('apply-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('submit-btn');
+        btn.innerHTML = createLoader() + ' Submitting...';
+        btn.disabled = true;
+
+        const application_id = 'PAS-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random() * 9000);
+        
+        const payload = {
+          user_id: userId,
+          application_id,
+          full_name: document.getElementById('full_name').value,
+          dob: document.getElementById('dob').value,
+          gender: document.getElementById('gender').value,
+          nationality: document.getElementById('nationality').value,
+          place_of_birth: document.getElementById('place_of_birth').value,
+          mobile: document.getElementById('mobile').value,
+          email: document.getElementById('email').value,
+          address: document.getElementById('address').value,
+          city: document.getElementById('city').value,
+          state: document.getElementById('state').value,
+          pincode: document.getElementById('pincode').value,
+          aadhaar_number: document.getElementById('aadhaar_number').value,
+          pan_number: document.getElementById('pan_number').value,
+          passport_type: document.getElementById('passport_type').value,
+          application_type: document.getElementById('application_type').value,
+          emergency_contact: document.getElementById('emergency_contact').value,
+          status: 'Submitted'
+        };
+
+        const { data, error } = await supabase.from('passport_applications').insert(payload).select();
+
+        if (error) {
+          showToast(error.message, 'error');
+          btn.innerHTML = 'Submit Application';
+          btn.disabled = false;
+        } else {
+          // create notification
+          await supabase.from('notifications').insert({
+            user_id: userId,
+            title: 'Application Submitted',
+            message: `Your passport application (${application_id}) has been submitted successfully.`
+          });
+          
+          showToast('Application Submitted successfully!', 'success');
+          setTimeout(() => {
+            window.location.href = '/user/dashboard.html';
+          }, 2000);
+        }
+      });
+    });
+  </script>
+</body>
+</html>

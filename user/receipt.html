@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Application Receipt - GPMS</title>
+  <link rel="stylesheet" href="/src/css/global.css">
+  <style>
+    body {
+      background-color: var(--bg-main);
+      padding: 2rem;
+      display: flex;
+      justify-content: center;
+    }
+    .receipt-container {
+      width: 100%;
+      max-width: 800px;
+      background: #fff;
+      color: #000;
+      padding: 3rem;
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .header {
+      text-align: center;
+      border-bottom: 2px solid #ccc;
+      padding-bottom: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .header h1 { color: #000; font-size: 2rem; margin-bottom: 0.5rem; }
+    .header p { color: #555; }
+    
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .info-item p { margin: 0.25rem 0; }
+    .info-item .label { font-weight: 600; color: #444; font-size: 0.9rem; text-transform: uppercase; }
+    
+    .disclaimer { margin-top: 3rem; font-size: 0.85rem; color: #666; text-align: center; border-top: 1px solid #ccc; padding-top: 1rem; }
+    
+    .actions { display: flex; gap: 1rem; justify-content: center; margin-top: 2rem; }
+    .btn-print { background: #4f46e5; color: #fff; border: none; padding: 0.75rem 1.5rem; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: 500; }
+    
+    /* Print Styles */
+    @media print {
+      body { background: none; padding: 0; }
+      .receipt-container { box-shadow: none; max-width: 100%; padding: 0; }
+      .actions { display: none; }
+    }
+  </style>
+</head>
+<body>
+  
+  <div class="receipt-container" id="receipt">
+    <div class="header">
+      <h1>Global Passport Management System</h1>
+      <p>Official Application Receipt</p>
+    </div>
+
+    <div class="info-grid" id="content">
+      <div class="text-center" style="grid-column: 1 / -1; padding: 2rem;">
+        <p>Loading application data...</p>
+      </div>
+    </div>
+
+    <div class="disclaimer">
+      <p>This is a computer-generated receipt. Please carry a printed copy of this receipt along with all original documents to the Passport Office on your scheduled appointment date.</p>
+      <p>Generated on: <span id="gen-date"></span></p>
+    </div>
+
+    <div class="actions">
+      <button class="btn-print" onclick="window.print()">Print / Save as PDF</button>
+      <a href="/user/dashboard.html" class="btn-print" style="background: #64748b; text-decoration: none;">Back to Dashboard</a>
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase } from '/src/js/db.js';
+    import { requireAuth } from '/src/js/ui.js';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const session = await requireAuth(supabase);
+      if (!session) return;
+      
+      document.getElementById('gen-date').innerText = new Date().toLocaleString();
+
+      const params = new URLSearchParams(window.location.search);
+      const appId = params.get('id');
+
+      if (!appId) {
+        document.getElementById('content').innerHTML = '<p style="grid-column: 1/-1; color: red;">Error: Invalid Request</p>';
+        return;
+      }
+
+      // Fetch Application
+      const { data: app } = await supabase.from('passport_applications').select('*').eq('id', appId).single();
+      
+      if (!app || app.user_id !== session.user.id) {
+        document.getElementById('content').innerHTML = '<p style="grid-column: 1/-1; color: red;">Error: Application not found or unauthorized</p>';
+        return;
+      }
+
+      // Fetch Appointment
+      const { data: apts } = await supabase.from('appointments').select('*').eq('application_id', appId).limit(1);
+      const apt = (apts && apts.length > 0) ? apts[0] : null;
+
+      document.getElementById('content').innerHTML = `
+        <div class="info-item" style="grid-column: 1 / -1; background: #f8fafc; padding: 1.5rem; border-radius: 4px; border: 1px solid #e2e8f0; margin-bottom: 1rem;">
+          <h2 style="margin: 0 0 0.5rem 0; font-size: 1.5rem; text-align: center;">ID: ${app.application_id}</h2>
+          <p style="text-align: center; font-weight: 600; color: #10b981;">Status: ${app.status}</p>
+        </div>
+
+        <div class="info-item">
+          <p class="label">Applicant Name</p>
+          <p>${app.full_name}</p>
+        </div>
+        <div class="info-item">
+          <p class="label">Date of Birth / Gender</p>
+          <p>${new Date(app.dob).toLocaleDateString()} / ${app.gender}</p>
+        </div>
+        
+        <div class="info-item">
+          <p class="label">Email</p>
+          <p>${app.email}</p>
+        </div>
+        <div class="info-item">
+          <p class="label">Mobile</p>
+          <p>${app.mobile}</p>
+        </div>
+
+        <div class="info-item" style="grid-column: 1 / -1;">
+          <p class="label">Address</p>
+          <p>${app.address}, ${app.city}, ${app.state} - ${app.pincode}</p>
+        </div>
+
+        <div class="info-item">
+          <p class="label">Passport Type</p>
+          <p>${app.passport_type}</p>
+        </div>
+        <div class="info-item">
+          <p class="label">Application Type</p>
+          <p>${app.application_type}</p>
+        </div>
+
+        <div class="info-item" style="grid-column: 1 / -1; background: #f8fafc; padding: 1.5rem; border-radius: 4px; margin-top: 1rem; border-left: 4px solid #4f46e5;">
+          <p class="label">Appointment Details</p>
+          <p>${apt ? `<strong>${apt.passport_office}</strong> on <strong>${new Date(apt.appointment_date).toLocaleDateString()}</strong> at <strong>${apt.time_slot}</strong>` : '<em>Not yet scheduled</em>'}</p>
+        </div>
+      `;
+    });
+  </script>
+</body>
+</html>

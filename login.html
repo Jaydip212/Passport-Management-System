@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - GPSM</title>
+  <link rel="stylesheet" href="/src/css/global.css">
+  <link rel="stylesheet" href="/src/css/components.css">
+</head>
+<body>
+  <div class="auth-wrapper">
+    <div class="glass-panel" style="width: 100%; max-width: 450px; padding: 3rem;">
+      <div class="text-center mb-4">
+        <h2 class="gradient-text">Welcome Back</h2>
+        <p class="text-muted mt-1">Sign in to track your passport application</p>
+      </div>
+      
+      <form id="login-form">
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" id="email" class="form-control" required placeholder="you@example.com">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" id="password" class="form-control" required placeholder="••••••••">
+        </div>
+        
+        <button type="submit" class="btn btn-primary btn-block mt-3" id="submit-btn">Login</button>
+      </form>
+      
+      <div class="text-center mt-4">
+        <p class="text-muted">Don't have an account? <a href="/signup.html">Register here</a></p>
+        <p class="text-muted mt-1" style="font-size: 0.9rem;"><a href="/admin-login.html">Admin Portal</a></p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase } from '/src/js/db.js';
+    import { showToast, createLoader } from '/src/js/ui.js';
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const btn = document.getElementById('submit-btn');
+      
+      btn.innerHTML = createLoader() + ' Signing In...';
+      btn.disabled = true;
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        showToast(error.message, 'error');
+        btn.innerHTML = 'Login';
+        btn.disabled = false;
+      } else {
+        showToast('Login successful!', 'success');
+        
+        // Check role and redirect
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', data.user.id)
+          .single();
+          
+        if (profile?.role === 'admin') {
+          window.location.href = '/admin/dashboard.html';
+        } else {
+          window.location.href = '/user/dashboard.html';
+        }
+      }
+    });
+
+    // Check if already logged in
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (session && event === 'SIGNED_IN') {
+         // Let the above logic redirect, or generic redirect
+      }
+    });
+  </script>
+</body>
+</html>
