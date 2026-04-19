@@ -103,8 +103,31 @@ Head to [Supabase](https://supabase.com/), create a new project.
 npm run dev
 ```
 
-Your system is now exclusively running on `localhost:5173`. 
-*(Hint: Create an account and override the `role` directly in Supabase to `admin` to access the backend staff portal).*
+The app will now be running on `http://localhost:5173/`.
+
+---
+
+## 🔐 Default Roles & Credentials
+
+To access different portals, you need to follow these steps in your Supabase Dashboard:
+
+1. **User Portal**: Simply sign up via the `/signup.html` page.
+2. **Admin Portal**: 
+   - Sign up as a regular user first.
+   - Go to your Supabase Dashboard -> **Table Editor** -> **profiles**.
+   - Find your email and change the `role` from `user` to `admin`.
+   - Now login via `/admin-login.html`.
+3. **Police Portal**:
+   - Sign up as a regular user.
+   - In the **profiles** table, change the `role` to `police`.
+   - Login via the standard login page; you will be redirected to `/police/dashboard.html`.
+
+**Suggested testing credentials (after manual role update):**
+- **Admin**: `admin@example.com` / `Admin@123`
+- **Police**: `police@example.com` / `Police@123`
+
+---
+
 
 <div align="center">
   <br>

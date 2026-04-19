@@ -184,7 +184,7 @@
           passport_type: document.getElementById('passport_type').value,
           application_type: document.getElementById('application_type').value,
           emergency_contact: document.getElementById('emergency_contact').value,
-          status: 'Submitted'
+          status: 'Payment Pending' // Route to checkout first
         };
 
         const { data, error } = await supabase.from('passport_applications').insert(payload).select();
@@ -197,14 +197,14 @@
           // create notification
           await supabase.from('notifications').insert({
             user_id: userId,
-            title: 'Application Submitted',
-            message: `Your passport application (${application_id}) has been submitted successfully.`
+            title: 'Application Created',
+            message: `Your passport application (${application_id}) has been created. Please complete the payment to submit.`
           });
           
-          showToast('Application Submitted successfully!', 'success');
+          showToast('Redirecting to secure checkout...', 'success');
           setTimeout(() => {
-            window.location.href = '/user/dashboard.html';
-          }, 2000);
+            window.location.href = `/user/payment.html?id=${data[0].id}`;
+          }, 1500);
         }
       });
     });

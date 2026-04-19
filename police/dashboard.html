@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Police Dashboard - GPMS</title>
+  <link rel="stylesheet" href="/src/css/global.css">
+  <link rel="stylesheet" href="/src/css/components.css">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    .layout-wrapper { display: flex; min-height: 100vh; }
+    .sidebar { width: 260px; background: var(--bg-card); border-right: 1px solid var(--border-color); padding: 2rem 1.5rem; display: flex; flex-direction: column; }
+    .main-content { flex: 1; padding: 2.5rem; overflow-y: auto; }
+    .nav-item { padding: 0.75rem 1rem; border-radius: var(--radius-sm); color: var(--text-muted); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.75rem; transition: var(--transition); }
+    .nav-item:hover, .nav-item.active { background: rgba(79, 70, 229, 0.15); color: white; }
+    
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+    .status-pill { padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; font-weight: 500; }
+    .status-pending { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+  </style>
+</head>
+<body>
+  <div class="layout-wrapper">
+    <aside class="sidebar">
+      <div class="d-flex align-center gap-2 mb-4" style="padding-left: 0.5rem;">
+        <i class="ph-fill ph-shield-check" style="color: var(--accent); font-size: 2rem;"></i>
+        <h2 class="gradient-text" style="font-size: 1.5rem;">GPMS Police</h2>
+      </div>
+      <nav>
+        <a href="/police/dashboard.html" class="nav-item active"><i class="ph ph-house-line"></i> Dashboard</a>
+        <a href="#" id="logout-btn" class="nav-item mt-4" style="color: var(--danger);"><i class="ph ph-sign-out"></i> Logout</a>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <div class="d-flex justify-between align-center mb-4">
+        <div>
+          <h2>Police Verification Queue</h2>
+          <p class="text-muted">Review and verify applications assigned for field background check.</p>
+        </div>
+        <div class="d-flex align-center gap-3">
+          <span id="user-display" class="text-muted">Police Officer</span>
+        </div>
+      </div>
+
+      <div class="card mb-4" style="padding: 0; overflow: hidden;">
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="background: rgba(255,255,255,0.05); text-align: left;">
+              <th style="padding: 1rem;">App ID</th>
+              <th style="padding: 1rem;">Applicant Name</th>
+              <th style="padding: 1rem;">Address</th>
+              <th style="padding: 1rem;">Status</th>
+              <th style="padding: 1rem;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="applications-body">
+            <tr>
+              <td colspan="5" style="padding: 2rem; text-align: center;" class="text-muted">Loading verification queue...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- Action Modal -->
+  <div id="action-modal" class="modal hidden">
+    <div class="modal-content glass-panel" style="max-width: 500px;">
+      <h3 class="mb-2">Verify Application</h3>
+      <p class="text-muted mb-4">Update the background check result for <span id="modal-app-id" style="color: white; font-weight: bold;"></span></p>
+      
+      <div class="form-group">
+        <label class="form-label">Verification Result</label>
+        <select id="verification-status" class="form-control">
+          <option value="Appointment Scheduled">Verification Passed (Approve)</option>
+          <option value="Rejected">Verification Failed (Reject)</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Police Remarks / Findings</label>
+        <textarea id="police-remark" class="form-control" rows="4" placeholder="Enter background check findings..."></textarea>
+      </div>
+
+      <div class="d-flex justify-end gap-2 mt-4">
+        <button id="close-modal" class="btn btn-outline">Cancel</button>
+        <button id="save-verification" class="btn btn-primary">Save Result</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase } from '/src/js/db.js';
+    import { showToast, createLoader } from '/src/js/ui.js';
+
+    let selectedAppId = null;
+
+    async function checkPoliceAuth() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        window.location.href = '/login.html';
+        return;
+      }
+      
+      const { data: profile } = await supabase.from('profiles').select('role, full_name').eq('id', session.user.id).single();
+      if (profile.role !== 'police') {
+        window.location.href = '/login.html';
+        return;
+      }
+      document.getElementById('user-display').innerText = profile.full_name;
+    }
+
+    async function loadQueue() {
+      const { data: apps, error } = await supabase
+        .from('passport_applications')
+        .select('*')
+        .eq('status', 'Police Verification')
+        .order('updated_at', { ascending: true });
+
+      const tbody = document.getElementById('applications-body');
+      
+      if (error) {
+        tbody.innerHTML = `<tr><td colspan="5" style="padding: 2rem; text-align: center; color: var(--danger);">Error loading data</td></tr>`;
+        return;
+      }
+
+      if (!apps || apps.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="padding: 2rem; text-align: center;" class="text-muted">No applications pending for police verification.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = apps.map(app => `
+        <tr style="border-top: 1px solid var(--border-color);">
+          <td style="padding: 1rem;">${app.application_id}</td>
+          <td style="padding: 1rem;">
+            <div style="font-weight: 500;">${app.full_name}</div>
+            <div style="font-size: 0.85rem;" class="text-muted">${app.mobile}</div>
+          </td>
+          <td style="padding: 1rem; max-width: 250px; font-size: 0.9rem;">${app.address}, ${app.city}</td>
+          <td style="padding: 1rem;"><span class="status-pill status-pending">${app.status}</span></td>
+          <td style="padding: 1rem;">
+            <button class="btn btn-primary btn-sm verify-btn" data-id="${app.id}" data-appid="${app.application_id}">Verify</button>
+          </td>
+        </tr>
+      `).join('');
+
+      document.querySelectorAll('.verify-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          selectedAppId = e.target.dataset.id;
+          document.getElementById('modal-app-id').innerText = e.target.dataset.appid;
+          document.getElementById('action-modal').classList.remove('hidden');
+        });
+      });
+    }
+
+    document.getElementById('save-verification').addEventListener('click', async () => {
+      const status = document.getElementById('verification-status').value;
+      const remark = document.getElementById('police-remark').value;
+      const btn = document.getElementById('save-verification');
+      
+      btn.innerHTML = createLoader() + ' Saving...';
+      btn.disabled = true;
+
+      const { error } = await supabase
+        .from('passport_applications')
+        .update({ 
+          status: status,
+          police_remark: remark,
+          admin_remark: status === 'Rejected' ? `Police Verification Failed: ${remark}` : null
+        })
+        .eq('id', selectedAppId);
+
+      if (error) {
+        showToast(error.message, 'error');
+      } else {
+        showToast('Verification updated successfully', 'success');
+        document.getElementById('action-modal').classList.add('hidden');
+        loadQueue();
+      }
+      btn.innerHTML = 'Save Result';
+      btn.disabled = false;
+    });
+
+    document.getElementById('close-modal').addEventListener('click', () => {
+      document.getElementById('action-modal').classList.add('hidden');
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = '/login.html';
+    });
+
+    await checkPoliceAuth();
+    loadQueue();
+  </script>
+</body>
+</html>
