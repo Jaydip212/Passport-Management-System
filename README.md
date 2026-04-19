@@ -1,98 +1,112 @@
 <div align="center">
-  <img src="https://img.icons8.com/color/100/000000/passport.png" alt="Passport Icon" width="80" />
-  <h1>🛂 Global Passport Management System</h1>
-  <p>A seamless, fully digital, and highly secure platform to apply, track, and manage passport applications.</p>
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=4f46e5&height=200&section=header&text=Passport%20Management%20System&fontSize=50&fontAlignY=35&fontColor=ffffff" width="100%" />
+</div>
 
+<div align="center">
+  <p align="center">
+    <b>A Next-Gen Digital Solution for Passport Services</b>
+  </p>
   <p>
-    <img alt="HTML5" src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white" />
-    <img alt="CSS3" src="https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white" />
-    <img alt="JavaScript" src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" />
-    <img alt="Supabase" src="https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" />
-    <img alt="Vite" src="https://img.shields.io/badge/Vite-B73BFE?style=for-the-badge&logo=vite&logoColor=FFD62E" />
+    <a href="https://supabase.com/"><img src="https://img.shields.io/badge/Powered_by-Supabase-3ECF8E?style=flat-square&logo=supabase"></a>
+    <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript"><img src="https://img.shields.io/badge/Logic-Vanilla_JS-F7DF1E?style=flat-square&logo=javascript"></a>
+    <a href="https://web.dev/"><img src="https://img.shields.io/badge/UI-Glassmorphism-4f46e5?style=flat-square"></a>
   </p>
 </div>
 
----
+<br />
 
-## 🌟 Overview
+## 📖 About The Project
 
-The **Passport Management System (GPMS)** is a comprehensive web application designed for students and professionals. Built with an extremely elegant and **glassmorphic** UI utilizing Vanilla CSS, the project avoids complex frameworks while offering a premium look. It includes complete **Role-Based Access Control (RBAC)**, document uploads, appointment booking, and realistic application tracking.
+Traditional passport processes are tedious. **Global Passport Management System (GPMS)** shifts the entire process into the cloud. Designed with an ultra-premium **glassmorphic aesthetic**, this system provides an entirely digital pipeline for document verification, scheduling, and tracking. 
 
-Ideal as a **college final-year project** or a SaaS case study.
-
-## ✨ Key Features
-
-### 👤 User Portal
-- **Authentication**: Secure Login/Signup utilizing Supabase Auth logic.
-- **Application Forms**: Complete multi-step passport form with standard format validations (Aadhaar, PAN, Phone).
-- **Document Management**: Highly secure document upload to cloud storage.
-- **Appointment Booking**: Intelligent slot selection algorithm rejecting double bookings. 
-- **Real-Time Tracking**: Interactive 6-stage application tracking timeline.
-- **Receipt Generation**: Directly print and download application receipts cleanly integrated as PDFs.
-
-### 🛡️ Admin Portal
-- **Dashboard Overview**: Access live real-time metrics across applications and users.
-- **Manage Applications**: Filter applications, verify documents securely, approve/reject requests.
-- **Notification Engine**: Issue status transitions and rejection reasons that automatically alert applicants.
+Ideal for final year college submissions, integrating direct cloud databases without monolithic backends.
 
 ---
 
-## 🛠️ Tech Stack
+## ⚡ Core Workflow
 
-- **Frontend**: HTML5, Vanilla JavaScript (ES9), Vanilla CSS (Custom Properties, Flexbox, Glassmorphism)
-- **Backend / DB / Auth**: [Supabase](https://supabase.com/) (PostgreSQL backend)
-- **File Storage**: Supabase Storage Buckets
-- **Bundler**: Vite
+```mermaid
+graph LR
+    A[Signup/Auth] --> B(Apply Passport)
+    B --> C{Upload Docs}
+    C -->|Stored in Cloud| D[Under Review]
+    D --> E(Appointment Booked)
+    E --> F[Approved & Dispatched]
+    
+    style A fill:#4f46e5,color:#fff
+    style B fill:#0f172a,color:#fff
+    style F fill:#10b981,color:#fff
+```
 
 ---
 
-## 💻 Local Setup & Installation
+## 🚀 Key Modules & Capabilities
 
-Get up and running in a few simple steps.
+| Module | Description | Highlights |
+| :---: | :--- | :--- |
+| 🧑‍💻 **Applicant Portal** | Centralized dashboard for users to apply, book and generate receipts. | Dynamic Tracking Timeline, Print PDF. |
+| 📂 **Document Engine** | Securely uploads user PAN/Aadhaar documents via Supabase. | Strict MIME-type validations natively. |
+| 🛡️ **Admin Console** | Distinct protected portal with real-time analytics & verification capabilities. | Direct approval/rejection algorithms. |
 
-### 1. Prerequisites
-Ensure you have Node.js and NPM installed on your machine.
-- Node.js (v16+)
+---
 
-### 2. Clone the Repository
+<br />
+
+## 🛠️ Stack & Architecture
+
+<table align="center">
+  <tr>
+    <td align="center" width="96">
+      <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/html5/html5-original.svg" width="48" height="48" alt="HTML5" />
+      <br>HTML5
+    </td>
+    <td align="center" width="96">
+      <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/css3/css3-original.svg" width="48" height="48" alt="CSS3" />
+      <br>CSS3 (Variables)
+    </td>
+    <td align="center" width="96">
+      <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/javascript/javascript-original.svg" width="48" height="48" alt="JavaScript" />
+      <br>ES9 JS
+    </td>
+    <td align="center" width="96">
+      <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/postgresql/postgresql-original.svg" width="48" height="48" alt="Supabase DB" />
+      <br>Supabase PG
+    </td>
+    <td align="center" width="96">
+      <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/vitejs/vitejs-original.svg" width="48" height="48" alt="Vite" />
+      <br>Vite.js
+    </td>
+  </tr>
+</table>
+
+---
+
+## 💻 Quick Start & Deployment
+
+Run this project perfectly on your local machine to study or demo:
+
+### 1️⃣ Clone & Install
 ```bash
 git clone https://github.com/Jaydip212/Passport-Management-System.git
 cd Passport-Management-System
-```
-
-### 3. Install Dependencies
-```bash
 npm install
 ```
 
-### 4. Supabase Configuration
-Create a free project on [Supabase](https://supabase.com).
-1. Go to the **SQL Editor**, paste and run the contents of the `supabase_schema.sql` file located in the root directory. This securely creates your tables, Row Level Security (RLS) policies, and triggers.
-2. In the Supabase **Storage** section, create a new public bucket named `documents`.
-3. Create a `.env` file in the root folder using `.env.example` as a reference:
-   
-```bash
-VITE_SUPABASE_URL=YOUR_SUPABASE_PROJECT_URL
-VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
-```
+### 2️⃣ Cloud Database Setup
+Head to [Supabase](https://supabase.com/), create a new project.
+1. Run the entire `supabase_schema.sql` code in the Supabase **SQL Editor**. (Creates tables & RLS).
+2. Create a public bucket in Storage titled `documents`.
+3. Create a `.env` file referencing `.env.example` and place your URL + Anon Key.
 
-### 5. Run the Application
+### 3️⃣ Fire it up! 🔥
 ```bash
 npm run dev
 ```
 
-The app will now be running on `http://localhost:5173/`. 
+Your system is now exclusively running on `localhost:5173`. 
+*(Hint: Create an account and override the `role` directly in Supabase to `admin` to access the backend staff portal).*
 
----
-
-## 📸 Screenshots & UI Previews
-
-*(Add your beautiful screenshots here later showing the dashboard, track timeline, form, and admin screens!)*
-
-## 🤝 Contribution Guidelines
-Contributions, issues, and feature requests are always welcome! Feel free to check the [issues page](https://github.com/Jaydip212/Passport-Management-System/issues).
-
----
 <div align="center">
-  <sub>Built with ❤️ for top-class college presentations.</sub>
+  <br>
+  <i>Designed for Distinction 🏅</i>
 </div>
