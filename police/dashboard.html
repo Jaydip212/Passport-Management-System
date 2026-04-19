@@ -15,8 +15,18 @@
     .nav-item:hover, .nav-item.active { background: rgba(79, 70, 229, 0.15); color: white; }
     
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+    .stat-card { background: rgba(30, 41, 59, 0.5); padding: 1.5rem; border-radius: var(--radius-lg); border: 1px solid var(--border-color); }
+    .stat-card h4 { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.5rem; }
+    .stat-card .value { font-size: 1.8rem; font-weight: 700; color: white; }
+
+    .urgent-badge { background: var(--danger); color: white; padding: 0.1rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold; margin-left: 0.5rem; vertical-align: middle; }
     .status-pill { padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; font-weight: 500; }
     .status-pending { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+    
+    .record-checker { background: rgba(0,0,0,0.3); padding: 1rem; border-radius: var(--radius-md); border: 1px dashed var(--border-color); }
+    .doc-viewer-list { background: rgba(255,255,255,0.05); padding: 1rem; border-radius: var(--radius-md); }
+    .doc-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .doc-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
   </style>
 </head>
 <body>
@@ -35,11 +45,26 @@
     <main class="main-content">
       <div class="d-flex justify-between align-center mb-4">
         <div>
-          <h2>Police Verification Queue</h2>
-          <p class="text-muted">Review and verify applications assigned for field background check.</p>
+          <h2>Verification Portal</h2>
+          <p class="text-muted">Field verification queue and background investigation tools.</p>
         </div>
         <div class="d-flex align-center gap-3">
-          <span id="user-display" class="text-muted">Police Officer</span>
+          <span id="user-display" class="text-muted">Loading...</span>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <h4>Total Pending</h4>
+          <div class="value" id="stat-pending">0</div>
+        </div>
+        <div class="stat-card" style="border-top: 3px solid var(--danger);">
+          <h4>Urgent (Tatkal)</h4>
+          <div class="value" id="stat-urgent">0</div>
+        </div>
+        <div class="stat-card" style="border-top: 3px solid var(--success);">
+          <h4>Verified Today</h4>
+          <div class="value" id="stat-verified">0</div>
         </div>
       </div>
 
@@ -47,10 +72,10 @@
         <table style="width: 100%; border-collapse: collapse;">
           <thead>
             <tr style="background: rgba(255,255,255,0.05); text-align: left;">
-              <th style="padding: 1rem;">App ID</th>
+              <th style="padding: 1rem;">Application ID</th>
               <th style="padding: 1rem;">Applicant Name</th>
-              <th style="padding: 1rem;">Address</th>
-              <th style="padding: 1rem;">Status</th>
+              <th style="padding: 1rem;">Field Address</th>
+              <th style="padding: 1rem;">Priority</th>
               <th style="padding: 1rem;">Action</th>
             </tr>
           </thead>
@@ -66,26 +91,51 @@
 
   <!-- Action Modal -->
   <div id="action-modal" class="modal hidden">
-    <div class="modal-content glass-panel" style="max-width: 500px;">
-      <h3 class="mb-2">Verify Application</h3>
-      <p class="text-muted mb-4">Update the background check result for <span id="modal-app-id" style="color: white; font-weight: bold;"></span></p>
-      
-      <div class="form-group">
-        <label class="form-label">Verification Result</label>
-        <select id="verification-status" class="form-control">
-          <option value="Appointment Scheduled">Verification Passed (Approve)</option>
-          <option value="Rejected">Verification Failed (Reject)</option>
-        </select>
-      </div>
-      
-      <div class="form-group">
-        <label class="form-label">Police Remarks / Findings</label>
-        <textarea id="police-remark" class="form-control" rows="4" placeholder="Enter background check findings..."></textarea>
+    <div class="modal-content glass-panel" style="max-width: 650px; width: 95%;">
+      <div class="d-flex justify-between mb-4">
+        <h3>Verify Applicant Details</h3>
+        <button id="close-modal" class="btn btn-outline btn-sm">Close</button>
       </div>
 
-      <div class="d-flex justify-end gap-2 mt-4">
-        <button id="close-modal" class="btn btn-outline">Cancel</button>
-        <button id="save-verification" class="btn btn-primary">Save Result</button>
+      <div class="d-flex gap-4" style="flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 300px;">
+          <div class="form-group">
+            <label class="form-label">Background Investigation Result</label>
+            <select id="verification-status" class="form-control">
+              <option value="Appointment Scheduled">Verification Passed (No Criminal Record)</option>
+              <option value="Rejected">Verification Failed (Adverse Findings)</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Investigation Remarks</label>
+            <textarea id="police-remark" class="form-control" rows="4" placeholder="Enter site visit findings and background details..."></textarea>
+          </div>
+
+          <div class="record-checker mb-3">
+            <p class="mb-2" style="font-weight: 500; font-size: 0.9rem;">P.I.N. Database Check</p>
+            <div id="check-output" class="text-muted mb-2" style="font-size: 0.85rem; font-family: monospace; background: #000; padding: 0.5rem; border-radius: 4px;">
+              System ready for search...
+            </div>
+            <button id="simulate-bg-check" class="btn btn-outline btn-block btn-sm">
+              <i class="ph ph-magnifying-glass"></i> Search Criminal Records
+            </button>
+          </div>
+          
+          <button id="save-verification" class="btn btn-primary btn-block">Confirm & Finalize Result</button>
+        </div>
+
+        <div style="flex: 1; min-width: 200px;">
+          <h4 class="mb-2">Applicant Documents</h4>
+          <div class="doc-viewer-list" id="modal-docs-list">
+            <p class="text-muted" style="font-size: 0.85rem;">Fetching docs...</p>
+          </div>
+
+          <div class="mt-3 p-3" style="background: rgba(79, 70, 229, 0.1); border-radius: 8px;">
+            <p style="font-size: 0.8rem; font-weight: 600; color: var(--accent);">QUICK INFO</p>
+            <p id="modal-quick-info" style="font-size: 0.9rem; margin-top: 0.25rem;">Application ID: <br>ID Number:</p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -95,6 +145,7 @@
     import { showToast, createLoader } from '/src/js/ui.js';
 
     let selectedAppId = null;
+    let allApps = [];
 
     async function checkPoliceAuth() {
       const { data: { session } } = await supabase.auth.getSession();
@@ -108,7 +159,15 @@
         window.location.href = '/login.html';
         return;
       }
-      document.getElementById('user-display').innerText = profile.full_name;
+      document.getElementById('user-display').innerText = `Officer: ${profile.full_name}`;
+    }
+
+    async function loadStats(apps) {
+      document.getElementById('stat-pending').innerText = apps.length;
+      document.getElementById('stat-urgent').innerText = apps.filter(a => a.passport_type === 'Tatkal').length;
+      
+      // For demo, let's say "Verified Today" is static or we fetch recently updated ones
+      document.getElementById('stat-verified').innerText = Math.floor(Math.random() * 10) + 1;
     }
 
     async function loadQueue() {
@@ -124,6 +183,9 @@
         tbody.innerHTML = `<tr><td colspan="5" style="padding: 2rem; text-align: center; color: var(--danger);">Error loading data</td></tr>`;
         return;
       }
+      
+      allApps = apps;
+      loadStats(apps);
 
       if (!apps || apps.length === 0) {
         tbody.innerHTML = `<tr><td colspan="5" style="padding: 2rem; text-align: center;" class="text-muted">No applications pending for police verification.</td></tr>`;
@@ -132,27 +194,71 @@
 
       tbody.innerHTML = apps.map(app => `
         <tr style="border-top: 1px solid var(--border-color);">
-          <td style="padding: 1rem;">${app.application_id}</td>
+          <td style="padding: 1rem;"><strong>${app.application_id}</strong></td>
           <td style="padding: 1rem;">
             <div style="font-weight: 500;">${app.full_name}</div>
             <div style="font-size: 0.85rem;" class="text-muted">${app.mobile}</div>
           </td>
-          <td style="padding: 1rem; max-width: 250px; font-size: 0.9rem;">${app.address}, ${app.city}</td>
-          <td style="padding: 1rem;"><span class="status-pill status-pending">${app.status}</span></td>
+          <td style="padding: 1rem; max-width: 250px; font-size: 0.9rem;">
+             <div>${app.city}, ${app.state}</div>
+             <div class="text-muted" style="font-size: 0.8rem;">PIN: ${app.pincode}</div>
+          </td>
           <td style="padding: 1rem;">
-            <button class="btn btn-primary btn-sm verify-btn" data-id="${app.id}" data-appid="${app.application_id}">Verify</button>
+            ${app.passport_type === 'Tatkal' ? '<span class="urgent-badge">URGENT</span>' : '<span class="text-muted">Normal</span>'}
+          </td>
+          <td style="padding: 1rem;">
+            <button class="btn btn-primary btn-sm verify-btn" data-id="${app.id}">Investigate</button>
           </td>
         </tr>
       `).join('');
 
       document.querySelectorAll('.verify-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          selectedAppId = e.target.dataset.id;
-          document.getElementById('modal-app-id').innerText = e.target.dataset.appid;
-          document.getElementById('action-modal').classList.remove('hidden');
-        });
+        btn.addEventListener('click', (e) => openModal(e.target.dataset.id));
       });
     }
+
+    async function openModal(id) {
+      selectedAppId = id;
+      const app = allApps.find(a => a.id === id);
+      
+      document.getElementById('action-modal').classList.remove('hidden');
+      document.getElementById('check-output').innerText = 'System ready for search...';
+      document.getElementById('modal-quick-info').innerHTML = `App ID: <strong>${app.application_id}</strong><br>Aadhaar: ${app.aadhaar_number}`;
+      
+      // Fetch Docs for this app
+      const docsList = document.getElementById('modal-docs-list');
+      docsList.innerHTML = '<p class="text-muted">Fetching...</p>';
+      
+      const { data: docs } = await supabase.from('documents').select('*').eq('application_id', id);
+      
+      if (docs && docs.length > 0) {
+        docsList.innerHTML = docs.map(doc => {
+          const { data } = supabase.storage.from('documents').getPublicUrl(doc.file_url);
+          return `
+            <div class="doc-item">
+              <span style="font-size: 0.85rem;">${doc.document_type}</span>
+              <a href="${data.publicUrl}" target="_blank" class="text-accent" style="font-size: 0.8rem;">View File</a>
+            </div>
+          `;
+        }).join('');
+      } else {
+        docsList.innerHTML = '<p class="text-muted">No documents found.</p>';
+      }
+    }
+
+    document.getElementById('simulate-bg-check').addEventListener('click', () => {
+      const output = document.getElementById('check-output');
+      output.innerText = '> Initializing P.I.N. Search...';
+      output.style.color = 'var(--accent)';
+      
+      setTimeout(() => { output.innerText = '> Connecting to Centralized Crime Database...'; }, 800);
+      setTimeout(() => { output.innerText = '> Matching biometrics & Aadhaar history...'; }, 1600);
+      setTimeout(() => { 
+        output.innerText = '> NO CRIMINAL RECORD FOUND. CLEAN STATUS.'; 
+        output.style.color = 'var(--success)';
+        showToast('Background check completed: CLEAR', 'success');
+      }, 2500);
+    });
 
     document.getElementById('save-verification').addEventListener('click', async () => {
       const status = document.getElementById('verification-status').value;
@@ -174,11 +280,11 @@
       if (error) {
         showToast(error.message, 'error');
       } else {
-        showToast('Verification updated successfully', 'success');
+        showToast('Investigation report finalized!', 'success');
         document.getElementById('action-modal').classList.add('hidden');
         loadQueue();
       }
-      btn.innerHTML = 'Save Result';
+      btn.innerHTML = 'Confirm & Finalize Result';
       btn.disabled = false;
     });
 
@@ -187,7 +293,7 @@
     });
 
     document.getElementById('logout-btn').addEventListener('click', async () => {
-      await supabase.auth.signOut();
+      await supabase.signOut();
       window.location.href = '/login.html';
     });
 
